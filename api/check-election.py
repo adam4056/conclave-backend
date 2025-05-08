@@ -1,9 +1,11 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 import requests
 import xmltodict
 from datetime import datetime, timedelta
 
 app = Flask(__name__)  # Správné použití __name__
+CORS(app)
 
 @app.route("/api/check-election", methods=["GET"])
 def check_election():
