@@ -10,7 +10,7 @@ CORS(app)
 @app.route("/api/check-election", methods=["GET"])
 def check_election():
     try:
-        feed_url = "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"
+        feed_url = "file:///" + "/c:/Users/Adam/Documents/Programovani 25/conclave-backend/api/test.xml"
         keywords = [
             "pope elected", "new pope", "white smoke", "new pontiff",
             "habemus papam", "papal conclave", "vatican elects",
