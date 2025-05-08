@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: check-election
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python api/check-election.py"
+    routes:
+      - src: /api/check-election
+        dest: /api/check-election
