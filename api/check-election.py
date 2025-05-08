@@ -1,65 +1,62 @@
+from flask import Flask, jsonify
 import requests
 import xmltodict
-from flask import Flask, jsonify
+from datetime import datetime, timedelta
 
-app = Flask(__name__)
+app = Flask(__name__)  # Správné použití __name__
 
-@app.route('/api/check-election', methods=['GET'])
+@app.route("/api/check-election", methods=["GET"])
 def check_election():
     try:
-        # URL RSS feedu
-        feed_url = 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114'
-        
-        # Klicová slova pro detekci volby papeže
+        feed_url = "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"
         keywords = [
-            'pope elected', 'new pope', 'white smoke', 'new pontiff',
-            'habemus papam', 'papal conclave', 'vatican elects',
-            'successor to francis', 'new vatican leader',
-            'conclave selects pope', 'st. peters square',
-            'new head of catholic church'
+            "pope elected", "new pope", "white smoke", "new pontiff",
+            "habemus papam", "papal conclave", "vatican elects",
+            "successor to francis", "new vatican leader",
+            "conclave selects pope", "st. peter's square",
+            "new head of catholic church"
         ]
-        
-        # Načtení a parsování RSS feedu
-        response = requests.get(feed_url)
-        feed = xmltodict.parse(response.text)
-        
-        # Získání položek z RSS feedu
-        items = feed['rss']['channel']['item']
-        
-        # Nastavení prahu pro novost článku (posledních 48 hodin)
-        recent_threshold = 48 * 60 * 60  # 48 hodin v sekundách
-        now = time.time()
-        
-        # Filtrace článků podle věku a klíčových slov
+
+        response = requests.get(feed_url, timeout=10)
+        response.raise_for_status()  # Přidání kontroly HTTP chyb
+        data = xmltodict.parse(response.content)
+
+        items = data.get("rss", {}).get("channel", {}).get("item", [])
+        if not isinstance(items, list):
+            items = [items]
+
+        now = datetime.utcnow()
+        recent_cutoff = now - timedelta(hours=48)
+
         matches = []
         for item in items:
-            pub_date = item['pubDate']
-            pub_timestamp = time.mktime(time.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %Z'))
-            age = now - pub_timestamp
-            
-            if age > recent_threshold:
+            pub_date_str = item.get("pubDate", "")
+            try:
+                pub_date = datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M:%S %z")
+            except ValueError:
                 continue
-            
-            title = item['title'].lower()
-            description = item.get('description', '').lower()
-            if any(keyword in title or keyword in description for keyword in keywords):
+
+            if pub_date.replace(tzinfo=None) < recent_cutoff:
+                continue
+
+            title = item.get("title", "").lower()
+            desc = item.get("description", "").lower()
+            if any(keyword in title or keyword in desc for keyword in keywords):
                 matches.append({
-                    'title': item['title'],
-                    'link': item['link'],
-                    'pubDate': item['pubDate']
+                    "title": item.get("title", ""),
+                    "link": item.get("link", ""),
+                    "pubDate": item.get("pubDate", "")
                 })
-        
-        # Odeslání výsledků
-        response_payload = {
-            'popeElected': len(matches) > 0,
-            'articles': matches
-        }
 
-        return jsonify(response_payload)
+        return jsonify({
+            "popeElected": len(matches) > 0,
+            "articles": matches
+        })
 
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Request failed: {str(e)}"}), 500
     except Exception as e:
-        print(f"Error checking election status: {e}")
-        return jsonify({'error': 'Election check failed'}), 500
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=80, debug=True)
