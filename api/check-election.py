@@ -10,7 +10,7 @@ CORS(app)
 @app.route("/api/check-election", methods=["GET"])
 def check_election():
     try:
-        feed_url = "file:///" + "/c:/Users/Adam/Documents/Programovani 25/conclave-backend/api/test.xml"
+        feed_url = "https://conclave-detection.vercel.app/test.xml"
         keywords = [
             "pope elected", "new pope", "white smoke", "new pontiff",
             "habemus papam", "papal conclave", "vatican elects",
